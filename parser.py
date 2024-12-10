@@ -14,13 +14,14 @@ class Headers():
 	Front = 'Front'
 	Memory_Aid = 'Memory Aid'
 	Meaning = 'Meaning'
-	Primitive_Meaning = 'Primitive Meaning'
 	Kunyomi = 'Kunyomi'
 	Onyomi = 'Onyomi'
-	Example = 'Example'
-	Words = 'Words'
+	Example_Word = 'Example Word'
+	Example_Meaning = 'Example Meaning'
 	Radical = 'Radical'
-	Meaning = 'Meaning'
+	Radical_Meaning = 'Radical Meaning'
+	Radical_Onyomi = 'Radical Onyomi'
+	Radical_Kunyomi = 'Radical Kunyomi'
 
 # =================
 # |  User Inputs  |
@@ -43,47 +44,94 @@ def output_to_csv(csv_writer:DictWriter, csv_dict:dict):
 	csv_writer.writerow(csv_dict.values())
 	csv_writer.writerow(csv_dict.values())
 
-def get_data_from_kanji(kanji):
+def get_example(kanji):
+	url = f'https://www.jisho.org/search/*{kanji}*'
+	response = requests.get(url)
+	html_content = response.content
+	soup = BeautifulSoup(html_content, 'html.parser')
+
+	# Only look in elements in the first section of jisho, then start narroiwng down to the words themselves
+	example_elements = soup.find('div', {'id':'primary'})
+	example_elements = example_elements.find_all('div', {'class':'concept_light'})
+	
+	for example_element in example_elements:
+		example_element_word = example_element.find('span', {'class':'text'})
+		example_element_meaning = example_element.find('span', {'class':'meaning-meaning'})
+		example_word = example_element_word.get_text().strip()
+		example_meaning = example_element_meaning.get_text().strip()
+
+		# Always return the first word that is not the kanji itself
+		if example_word != kanji:
+			return {
+				Headers.Example_Word: example_word,
+				Headers.Example_Meaning: example_meaning
+			}
+	
+
+def get_data_from_kanji(kanji, is_radical=False):
+	radical_dict = dict()
 	csv_dict = {
 		Headers.Front: '',
 		Headers.Memory_Aid: '',
 		Headers.Meaning: '',
-		Headers.Primitive_Meaning: '',
 		Headers.Kunyomi: '',
 		Headers.Onyomi: '',
-		Headers.Example: '',
-		Headers.Words: '',
+		Headers.Example_Word: '',
+		Headers.Example_Meaning: '',
 		Headers.Radical: '',
-		Headers.Meaning: '',
+		Headers.Radical_Meaning: '',
+		Headers.Radical_Onyomi: '',
+		Headers.Radical_Kunyomi: '',
 	}
 
 	url = f'https://www.jisho.org/search/{kanji}%20%23kanji'
 	response = requests.get(url)
-
 	html_content = response.content
-
 	soup = BeautifulSoup(html_content, 'html.parser')
 
+
 	csv_dict[Headers.Front] = kanji
+	
+	meaning_element = soup.find('div', {'class':'kanji-details__main-meanings'})
+	csv_dict[Headers.Meaning] = meaning_element.get_text().strip()
 
-	meaning_element = soup.select('div[class="kanji-details__main-meanings"]')
-	csv_dict[Headers.Meaning] = meaning_element[0].text
+	yomi_elements = soup.find('div', {'class':'kanji-details__main-readings'})
 
-	radical_element = soup.select('div[class="radicals"] > dl > dd > span ')
-	csv_dict[Headers.Radical] = radical_element[0].text
+	kunyomi_elements = yomi_elements.find('dl', {'class':'kun_yomi'})
+	# This allows us to skip this step if there's no Kunyomi, which is common for radicals
+	if kunyomi_elements != None:
+		kunyomi_elements = kunyomi_elements.find_all('dd', {'class':'kanji-details__main-readings-list'})
+		kunyomi_list = [element.get_text().strip() for element in kunyomi_elements]
+		csv_dict[Headers.Kunyomi] = ', '.join(kunyomi_list)
 
-	kunyomi_elements = soup.select('div[class="kanji-details__main-readings"] > dl[class="dictionary_entry kun_yomi"] > dd > a')
-	kunyomi_list = [element.text for element in kunyomi_elements]
-	kunyomi_string = ', '.join(kunyomi_list)
-	csv_dict[Headers.Kunyomi] = kunyomi_string
+	onyomi_elements = yomi_elements.find('dl', {'class':'on_yomi'})
+	onyomi_elements = onyomi_elements.find_all('dd', {'class':'kanji-details__main-readings-list'})
+	onyomi_list = [element.get_text().strip() for element in onyomi_elements]
+	csv_dict[Headers.Onyomi] = ', '.join(onyomi_list)
+	
+	radical_element = soup.find('div', {'class':'radicals'})
+	radical_element = radical_element.find('span')
+	# Remove the unneeded element so it's easier to get the string you want out of the tree
+	radical_element.find('span', {'class':'radical_meaning'}).extract()
+	csv_dict[Headers.Radical] = radical_element.get_text().strip()
 
-	onyomi_elements = soup.select('div[class="kanji-details__main-readings"] > dl[class="dictionary_entry on_yomi"] > dd > a')
-	onyomi_list = [element.text for element in onyomi_elements]
-	onyomi_string = ', '.join(onyomi_list)
-	csv_dict[Headers.Onyomi] = onyomi_string
+	if is_radical == False:
+		radical = csv_dict[Headers.Radical]
+		example_data = get_example(kanji)
+		csv_dict[Headers.Example_Word] = example_data[Headers.Example_Word]
+		csv_dict[Headers.Example_Meaning] = example_data[Headers.Example_Meaning]
 
-	print('CSV Dict:')
-	print(json.dumps(csv_dict, indent=4, ensure_ascii=False))
+		radical_dict = get_data_from_kanji(radical, is_radical=True)
+
+		csv_dict[Headers.Radical_Meaning] = radical_dict[Headers.Meaning]
+		csv_dict[Headers.Radical_Onyomi] = radical_dict[Headers.Onyomi]
+		csv_dict[Headers.Radical_Kunyomi] = radical_dict[Headers.Kunyomi]
+
+		if csv_dict[Headers.Radical_Kunyomi] == '':
+			csv_dict[Headers.Radical_Kunyomi] = 'None'
+
+		print('CSV Dict:')
+		print(json.dumps(csv_dict, indent=4, ensure_ascii=False))
 
 	return csv_dict
 
