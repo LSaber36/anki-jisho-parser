@@ -23,6 +23,20 @@ class Headers():
 	Radical_Onyomi = 'Radical Onyomi'
 	Radical_Kunyomi = 'Radical Kunyomi'
 
+csv_dict_blank = {
+		Headers.Kanji: '',
+		Headers.Memory_Aid: '',
+		Headers.Meaning: '',
+		Headers.Kunyomi: '',
+		Headers.Onyomi: '',
+		Headers.Example_Word: '',
+		Headers.Example_Meaning: '',
+		Headers.Radical: '',
+		Headers.Radical_Meaning: '',
+		Headers.Radical_Onyomi: '',
+		Headers.Radical_Kunyomi: '',
+	}
+
 # =================
 # |  User Inputs  |
 # =================
@@ -70,19 +84,7 @@ def get_example(kanji):
 
 def get_data_from_kanji(kanji, is_radical=False):
 	radical_dict = dict()
-	csv_dict = {
-		Headers.Front: '',
-		Headers.Memory_Aid: '',
-		Headers.Meaning: '',
-		Headers.Kunyomi: '',
-		Headers.Onyomi: '',
-		Headers.Example_Word: '',
-		Headers.Example_Meaning: '',
-		Headers.Radical: '',
-		Headers.Radical_Meaning: '',
-		Headers.Radical_Onyomi: '',
-		Headers.Radical_Kunyomi: '',
-	}
+	csv_dict = csv_dict_blank.copy()
 
 	url = f'https://www.jisho.org/search/{kanji}%20%23kanji'
 	response = requests.get(url)
