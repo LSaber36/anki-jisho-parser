@@ -16,6 +16,7 @@ class Headers():
 	Kunyomi = 'Kunyomi'
 	Onyomi = 'Onyomi'
 	Example_Word = 'Example Word'
+	Example_Kana = 'Example Kana'
 	Example_Meaning = 'Example Meaning'
 	Radical = 'Radical'
 	Radical_Meaning = 'Radical Meaning'
@@ -23,18 +24,19 @@ class Headers():
 	Radical_Kunyomi = 'Radical Kunyomi'
 
 csv_dict_blank = {
-		Headers.Kanji: '',
-		Headers.Memory_Aid: '',
-		Headers.Meaning: '',
-		Headers.Kunyomi: '',
-		Headers.Onyomi: '',
-		Headers.Example_Word: '',
-		Headers.Example_Meaning: '',
-		Headers.Radical: '',
-		Headers.Radical_Meaning: '',
-		Headers.Radical_Onyomi: '',
-		Headers.Radical_Kunyomi: '',
-	}
+	Headers.Kanji: '',
+	Headers.Memory_Aid: '',
+	Headers.Meaning: '',
+	Headers.Kunyomi: '',
+	Headers.Onyomi: '',
+	Headers.Example_Word: '',
+	Headers.Example_Kana: '',
+	Headers.Example_Meaning: '',
+	Headers.Radical: '',
+	Headers.Radical_Meaning: '',
+	Headers.Radical_Onyomi: '',
+	Headers.Radical_Kunyomi: '',
+}
 
 # =================
 # |  User Inputs  |
@@ -47,7 +49,7 @@ output_filename = 'anki_output.csv'
 
 def get_example(kanji):
 	url = f'https://www.jisho.org/search/*{kanji}*'
-	response = requests.get(url)
+	response = requests.get(url, timeout=10)
 	html_content = response.content
 	soup = BeautifulSoup(html_content, 'html.parser')
 
@@ -57,14 +59,18 @@ def get_example(kanji):
 	
 	for example_element in example_elements:
 		example_element_word = example_element.find('span', {'class':'text'})
+		example_element_kana = example_element.find('span', {'class':'furigana'})
 		example_element_meaning = example_element.find('span', {'class':'meaning-meaning'})
+
 		example_word = example_element_word.get_text().strip()
+		example_kana = example_element_kana.get_text().strip()
 		example_meaning = example_element_meaning.get_text().strip()
 
 		# Always return the first word that is not the kanji itself
-		if example_word != kanji:
+		if (example_word != kanji) and (kanji in example_word):
 			return {
 				Headers.Example_Word: example_word,
+				Headers.Example_Kana: example_kana,
 				Headers.Example_Meaning: example_meaning
 			}
 	
@@ -77,23 +83,16 @@ def get_kanji_data(kanji, show_data=True, is_radical=False):
 
 	try:
 		url = f'https://www.jisho.org/search/{kanji}%20%23kanji'
-		response = requests.get(url)
+		response = requests.get(url, timeout=10)
 		html_content = response.content
 	except Exception as e:
 		# If we encounter an exception with getting the response
 		html_content = None
-		print('Encountered Exception When Getting Request:\n{}'.format(traceback.print_exc(e)))
+		print('Encountered Exception When Getting Request:\n')
+		traceback.print_exc()
 
 	# Verify that the request was able to successfully get the website data
 	if html_content is not None:
-		# Print kanji before actual html parsing
-		if show_data:
-				# Print a bunch of newlines to make the output easier to read
-				for i in range(2):
-					print()
-
-				print(f'Kanji: {kanji}')
-
 		soup = BeautifulSoup(html_content, 'html.parser')
 		
 		meaning_element = soup.find('div', {'class':'kanji-details__main-meanings'})
@@ -102,16 +101,18 @@ def get_kanji_data(kanji, show_data=True, is_radical=False):
 		yomi_elements = soup.find('div', {'class':'kanji-details__main-readings'})
 
 		kunyomi_elements = yomi_elements.find('dl', {'class':'kun_yomi'})
-		# This allows us to skip this step if there's no Kunyomi, which is common for radicals
+		# Skip this step if there's no Kunyomi, which is common for radicals
 		if kunyomi_elements != None:
 			kunyomi_elements = kunyomi_elements.find_all('dd', {'class':'kanji-details__main-readings-list'})
 			kunyomi_list = [element.get_text().strip() for element in kunyomi_elements]
 			csv_dict[Headers.Kunyomi] = ', '.join(kunyomi_list)
 
 		onyomi_elements = yomi_elements.find('dl', {'class':'on_yomi'})
-		onyomi_elements = onyomi_elements.find_all('dd', {'class':'kanji-details__main-readings-list'})
-		onyomi_list = [element.get_text().strip() for element in onyomi_elements]
-		csv_dict[Headers.Onyomi] = ', '.join(onyomi_list)
+		# Skip this step if there's no Onyomi, which is uncommon for radicals, but not impossible to see
+		if onyomi_elements != None:
+			onyomi_elements = onyomi_elements.find_all('dd', {'class':'kanji-details__main-readings-list'})
+			onyomi_list = [element.get_text().strip() for element in onyomi_elements]
+			csv_dict[Headers.Onyomi] = ', '.join(onyomi_list)
 		
 		radical_element = soup.find('div', {'class':'radicals'})
 		radical_element = radical_element.find('span')
@@ -123,6 +124,7 @@ def get_kanji_data(kanji, show_data=True, is_radical=False):
 			radical = csv_dict[Headers.Radical]
 			example_data = get_example(kanji)
 			csv_dict[Headers.Example_Word] = example_data[Headers.Example_Word]
+			csv_dict[Headers.Example_Kana] = example_data[Headers.Example_Kana]
 			csv_dict[Headers.Example_Meaning] = example_data[Headers.Example_Meaning]
 
 			radical_dict = get_kanji_data(radical, is_radical=True)
@@ -136,6 +138,11 @@ def get_kanji_data(kanji, show_data=True, is_radical=False):
 
 			# Print data after parsing
 			if show_data:
+				# Print a bunch of newlines to make the output easier to read
+				for i in range(2):
+					print()
+
+				print(f'Kanji: {kanji}')
 				print('CSV Dict:')
 				print(json.dumps(csv_dict, indent=4, ensure_ascii=False))
 	else:
@@ -165,7 +172,7 @@ if __name__ == '__main__':
 			csv_reader = csv.reader(csv_input_file)
 			headers = next(csv_reader)
 			total_kanji = len(list(csv_reader))
-			print('Total Kanji To Parse: {}\n'.format(len(list(csv_reader))))
+			print('Total Kanji To Parse: {}\n'.format(total_kanji))
 
 		with open(input_filepath, 'r', encoding='utf-8') as csv_input_file:
 			csv_reader = csv.reader(csv_input_file)
@@ -217,4 +224,5 @@ if __name__ == '__main__':
 		total_time = datetime.now() - start_time
 		print(f'Total Execution Time: {total_time}')
 	except Exception as e:
-		print('Encountered Exception In Main:\n{}'.format(traceback.print_exc(e)))
+		print('Encountered Exception In Main:\n')
+		traceback.print_exc()
