@@ -86,6 +86,14 @@ def get_kanji_data(kanji, show_data=True, is_radical=False):
 
 	# Verify that the request was able to successfully get the website data
 	if html_content is not None:
+		# Print kanji before actual html parsing
+		if show_data:
+				# Print a bunch of newlines to make the output easier to read
+				for i in range(2):
+					print()
+
+				print(f'Kanji: {kanji}')
+
 		soup = BeautifulSoup(html_content, 'html.parser')
 		
 		meaning_element = soup.find('div', {'class':'kanji-details__main-meanings'})
@@ -126,12 +134,8 @@ def get_kanji_data(kanji, show_data=True, is_radical=False):
 			if csv_dict[Headers.Radical_Kunyomi] == '':
 				csv_dict[Headers.Radical_Kunyomi] = 'None'
 
+			# Print data after parsing
 			if show_data:
-				# Print a bunch of newlines to make the output easier to read
-				for i in range(2):
-					print()
-
-				print(f'Kanji: {kanji}')
 				print('CSV Dict:')
 				print(json.dumps(csv_dict, indent=4, ensure_ascii=False))
 	else:
@@ -200,10 +204,10 @@ if __name__ == '__main__':
 					remaining_execution_time = estimated_execution_time - current_execution_time
 
 					print()
-					print('This Parse Time:  {}'.format(str(parse_time_total).split('.')[0]))
-					print('Total Parse Time: {}'.format(str(current_execution_time).split('.')[0]))
-					print('Remaining Time:   {}'.format(str(remaining_execution_time).split('.')[0]))
-					print('Completion Time:  {}'.format(estimated_execution_datetime.strftime('%I:%M %p')))
+					print('This Parse Time:            {}'.format(str(parse_time_total).split('.')[0]))
+					print('Estimated Total Time:       {}'.format(str(current_execution_time).split('.')[0]))
+					print('Estimated Remaining Time:   {}'.format(str(remaining_execution_time).split('.')[0]))
+					print('Estimated Completion Time:  {}'.format(estimated_execution_datetime.strftime('%I:%M %p')))
 					progress_bar.set_stat(row_index+1)
 					progress_bar.update()
 					print()
