@@ -69,7 +69,7 @@ def get_example(kanji):
 			}
 	
 
-def get_data_from_kanji(kanji, is_radical=False):
+def get_kanji_data(kanji, show_data=True, is_radical=False):
 	radical_dict = dict()
 	csv_dict = csv_dict_blank.copy()
 
@@ -119,8 +119,14 @@ def get_data_from_kanji(kanji, is_radical=False):
 		if csv_dict[Headers.Radical_Kunyomi] == '':
 			csv_dict[Headers.Radical_Kunyomi] = 'None'
 
-		print('CSV Dict:')
-		print(json.dumps(csv_dict, indent=4, ensure_ascii=False))
+			if show_data:
+				# Print a bunch of newlines to make the output easier to read
+				for i in range(2):
+					print()
+
+				print(f'Kanji: {kanji}')
+				print('CSV Dict:')
+				print(json.dumps(csv_dict, indent=4, ensure_ascii=False))
 
 	return csv_dict
 
