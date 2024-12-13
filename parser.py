@@ -3,12 +3,11 @@
 - This csv file will then have comments and things added to it to make it ready to upload to Anki
 '''
 
-import os
-import csv
-import json
-from csv import DictWriter
-import requests
+import os, traceback, requests
+import csv, json
 from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
+from pyprog import ProgressBar 
 
 class Headers():
 	Front = 'Front'
@@ -44,19 +43,7 @@ input_folder = 'input_files'
 input_filename = 'Kanji.csv'
 
 output_folder = 'output_files'
-output_filename = 'test.csv'
-
-def output_to_csv(csv_writer:DictWriter, csv_dict:dict):
-	print('Outputting to CSV file')
-
-	headers = csv_dict.keys()
-
-	# Write the headers to the file
-	csv_writer.writerow(headers)
-
-	csv_writer.writerow(csv_dict.values())
-	csv_writer.writerow(csv_dict.values())
-	csv_writer.writerow(csv_dict.values())
+output_filename = 'anki_output.csv'
 
 def get_example(kanji):
 	url = f'https://www.jisho.org/search/*{kanji}*'
