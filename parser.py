@@ -68,7 +68,6 @@ def get_example(kanji):
 				Headers.Example_Meaning: example_meaning
 			}
 	
-
 def get_kanji_data(kanji, show_data=True, is_radical=False):
 	radical_dict = dict()
 	csv_dict = csv_dict_blank.copy()
