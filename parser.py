@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from pyprog import ProgressBar 
 
 class Headers():
-	Front = 'Front'
+	Kanji = 'Kanji'
 	Memory_Aid = 'Memory Aid'
 	Meaning = 'Meaning'
 	Kunyomi = 'Kunyomi'
