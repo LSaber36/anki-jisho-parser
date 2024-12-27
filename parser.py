@@ -45,7 +45,9 @@ input_folder = 'input_files'
 input_filename = 'Kanji.csv'
 
 output_folder = 'output_files'
-output_filename = 'anki_output.csv'
+output_filename = 'anki_output_test.csv'
+
+delimiter = ';'
 
 def get_example(kanji):
 	url = f'https://www.jisho.org/search/*{kanji}*'
@@ -74,12 +76,13 @@ def get_example(kanji):
 				Headers.Example_Meaning: example_meaning
 			}
 	
-def get_kanji_data(kanji, show_data=True, is_radical=False):
+def get_kanji_data(kanji, memory_aid='', show_data=True, is_radical=False):
 	radical_dict = dict()
 	csv_dict = csv_dict_blank.copy()
 
 	# Always set this first, since it is the unique identifier for the CSV file
 	csv_dict[Headers.Kanji] = kanji
+	csv_dict[Headers.Memory_Aid] = memory_aid
 
 	try:
 		url = f'https://www.jisho.org/search/{kanji}%20%23kanji'
@@ -178,13 +181,11 @@ if __name__ == '__main__':
 			csv_reader = csv.reader(csv_input_file)
 
 			with open(output_filepath, 'w', newline='', encoding='utf-8') as csv_output_file:
-				csv_writer = csv.writer(csv_output_file)
+				csv_writer = csv.writer(csv_output_file, delimiter=delimiter)
 
 				# Use this to skip the first line in the CSV
+				# No need to write these to the CSV, it's not needed for anki
 				input_csv_headers = next(csv_reader)
-
-				# Write the output CSV headers
-				csv_writer.writerow(csv_dict_blank.keys())
 
 				progress_bar = ProgressBar(\
 					prefix='', suffix='', wrap_bar_prefix='[', wrap_bar_suffix='] ',\
@@ -196,9 +197,10 @@ if __name__ == '__main__':
 				for row_index, row in enumerate(csv_reader):
 					parse_time_start = datetime.now()
 					kanji = row[0]
+					memory_aid = row[1]
 
 					# Write the new kanji data to the next row in the file
-					csv_writer.writerow(get_kanji_data(kanji).values())
+					csv_writer.writerow(get_kanji_data(kanji, memory_aid).values())
 
 					parse_time_total = datetime.now() - parse_time_start
 					current_execution_time += parse_time_total
